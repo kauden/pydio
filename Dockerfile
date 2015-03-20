@@ -1,61 +1,70 @@
-FROM ubuntu:14.04.2
+FROM centos:centos6
 
 MAINTAINER Thierry Corbin <thierry.corbin@kauden.fr>
 
-ENV DEBIAN_FRONTEND noninteractive
+RUN yum install -y wget && \
+    rpm -Uvh http://dl.ajaxplorer.info/repos/pydio-release-1-1.noarch.rpm && \
+    wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm && \
+    wget http://rpms.famillecollet.com/enterprise/remi-release-6.rpm
 
-RUN apt-get update && \
-    apt-get -y upgrade
+RUN wget -q -O – http://www.atomicorp.com/installers/atomic | sh
 
-RUN apt-get -y install supervisor \
-    nginx \
-    php5 \
-    php5-fpm \
-    php5-gd \
-    php5-cli \
-    php5-mcrypt \
-    php5-mysql \
-    php5-imap \
-    php5-curl \
-    php-pear \
-    libapr1 \
-    libaprutil1
+RUN rpm -Uvh remi-release-6*.rpm epel-release-6*.rpm && \
+    yum -y update && \
+    yum -y install httpd \
+    php-mcrypt* \
+    ImageMagick \
+    ImageMagick-devel \
+    ImageMagick-perl \
+    gcc \
+    cc \
+    php-pecl-apc \
+    php \
+    php-mysql \
+    php-cli \
+    php-devel \
+    php-gd \
+    php-pecl-memcache \
+    php-pspell \
+    php-snmp \
+    php-xmlrpc \
+    php-xml \
+    mysql \
+    php-ioncube-loader \
+    python-pip
 
-RUN apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    rm -rf /tmp/*
+ADD asset/bootstrap.json /etc/bootstrap.json
+ADD asset/configure_php_modules.sh /etc/configure_php_modules.sh
+ADD asset/pre_conf_pydio.sh /etc/pre_conf_pydio.sh
+ADD asset/public.htaccess /etc/public.htaccess
+ADD asset/pydio.conf /etc/pydio.conf
+ADD asset/root.htaccess /etc/root.htaccess
+ADD asset/supervisord.conf /etc/
 
-ADD asset/pydio /etc/nginx/sites-enabled/pydio
-ADD asset/pydio-core-6.0.5.tar.gz /usr/share/nginx/
-ADD asset/supervisord.conf /opt/supervisord.conf
+RUN chmod +x /etc/pre_conf_pydio.sh && \
+    chmod +x /etc/configure_php_modules.sh
 
-RUN echo "\ndaemon off;" >> /etc/nginx/nginx.conf && \
-    rm -f /etc/nginx/sites-enabled/default && \
-    rm -rf /usr/share/nginx/html && \
-    mv /usr/share/nginx/pydio-core-6.0.5 /usr/share/nginx/html && \
-    chown www-data:www-data /usr/share/nginx/html -R && \
-    mkdir /data /data/files /data/personal && \
-    chown www-data:www-data /data -R
 
-RUN php5enmod mcrypt \
-    php5enmod imap
+# install some php modules
+RUN /etc/configure_php_modules.sh
 
-RUN sed -i '/^file_uploads = /c file_uploads = On' /etc/php5/fpm/php.ini && \
-    sed -i '/^post_max_size = /c post_max_size = 20G' /etc/php5/fpm/php.ini && \
-    sed -i '/^upload_max_filesize = /c upload_max_filesize = 20G' /etc/php5/fpm/php.ini && \
-    sed -i '/^max_file_uploads = /c max_file_uploads = 20000' /etc/php5/fpm/php.ini && \
-    sed -i '/^output_buffering = /c output_buffering = Off' /etc/php5/fpm/php.ini && \
-    sed -i '/daemonize /c daemonize = no' /etc/php5/fpm/php-fpm.conf && \
-    sed -i 's/AJXP_DATA_PATH/\/data/g' /usr/share/nginx/html/conf/bootstrap_repositories.php && \
-    echo 'define("AJXP_LOCALE", "fr_FR.UTF-8");' >> /usr/share/nginx/html/conf/bootstrap_conf.php
+# fix lack of network file for mysql
+RUN echo -e "NETWORKING=yes" > /etc/sysconfig/network
 
-RUN pear install Mail_mimeDecode \
-    pear install HTTP_WebDAV_Client \
-    pear install VersionControl_Git-0.4.4 \
-    pear install HTTP_OAuth-0.3.1
+# install pydio
+RUN yum install -y --disablerepo=pydio-testing pydio
 
-VOLUME /data
+# install supervisord
+RUN pip install "pip>=1.4,<1.5" --upgrade && \
+    pip install supervisor
+
+# pre-configure pydio
+RUN /etc/pre_conf_pydio.sh
+
+RUN yum clean all
+
+VOLUME ["/var/lib/pydio", "/var/cache/pydio"]
 
 EXPOSE 80
 
-CMD /usr/bin/supervisord -c /opt/supervisord.conf
+CMD ["supervisord", "-n"]
