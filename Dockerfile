@@ -31,37 +31,33 @@ RUN rpm -Uvh remi-release-6*.rpm epel-release-6*.rpm && \
     php-xml \
     mysql \
     php-ioncube-loader \
-    python-pip
+    python-pip \
+    ssmtp
 
-ADD asset/bootstrap.json /etc/bootstrap.json
-ADD asset/configure_php_modules.sh /etc/configure_php_modules.sh
-ADD asset/pre_conf_pydio.sh /etc/pre_conf_pydio.sh
-ADD asset/public.htaccess /etc/public.htaccess
-ADD asset/pydio.conf /etc/pydio.conf
-ADD asset/root.htaccess /etc/root.htaccess
-ADD asset/supervisord.conf /etc/
+RUN mkdir -p /opt/pydio
 
-RUN chmod +x /etc/pre_conf_pydio.sh && \
-    chmod +x /etc/configure_php_modules.sh
+COPY asset/* /opt/pydio/
 
-
-# install some php modules
-RUN /etc/configure_php_modules.sh
-
-# fix lack of network file for mysql
-RUN echo -e "NETWORKING=yes" > /etc/sysconfig/network
+RUN cp -f /opt/pydio/supervisord.conf /etc/ && \
+    cp -f /opt/pydio/httpd.conf /etc/httpd/conf/ && \
+    cp -f /opt/pydio/pydio.conf /etc/ && \
+    chmod +x /opt/pydio/pre_conf_pydio.sh && \
+    chmod +x /opt/pydio/configure_php_modules.sh && \
+    /opt/pydio/configure_php_modules.sh
 
 # install pydio
-RUN yum install -y --disablerepo=pydio-testing pydio
+RUN yum install -y --disablerepo=pydio-testing pydio && \
+    yum clean all
 
 # install supervisord
 RUN pip install "pip>=1.4,<1.5" --upgrade && \
     pip install supervisor
 
 # pre-configure pydio
-RUN /etc/pre_conf_pydio.sh
+RUN /opt/pydio/pre_conf_pydio.sh
 
-RUN yum clean all
+# ssmtp
+RUN sed -i '/^sendmail_path/c\sendmail_path = /usr/sbin/ssmtp -t' /etc/php.ini
 
 VOLUME ["/var/lib/pydio", "/var/cache/pydio"]
 
