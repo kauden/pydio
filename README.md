@@ -1,6 +1,6 @@
 # kauden/nginx
 
-This is a Ubuntu-based image with pydio 6.0.5 installed.
+This is a Centos base image with pydio 6.0.5 installed.
 
 It's pre-configured to listen on port 80.
 

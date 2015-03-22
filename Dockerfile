@@ -40,7 +40,6 @@ COPY asset/* /opt/pydio/
 
 RUN cp -f /opt/pydio/supervisord.conf /etc/ && \
     cp -f /opt/pydio/httpd.conf /etc/httpd/conf/ && \
-    cp -f /opt/pydio/pydio.conf /etc/ && \
     chmod +x /opt/pydio/pre_conf_pydio.sh && \
     chmod +x /opt/pydio/configure_php_modules.sh && \
     /opt/pydio/configure_php_modules.sh
