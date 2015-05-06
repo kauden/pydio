@@ -29,12 +29,12 @@ RUN rpm -Uvh remi-release-6*.rpm epel-release-6*.rpm && \
     php-snmp \
     php-xmlrpc \
     php-xml \
-    mysql \
     php-ioncube-loader \
-    python-pip \
+    python-setuptools \
     ssmtp
 
-RUN mkdir -p /opt/pydio
+RUN mkdir -p /opt/pydio && \
+    easy_install supervisor
 
 COPY asset/* /opt/pydio/
 
@@ -46,14 +46,8 @@ RUN cp -f /opt/pydio/supervisord.conf /etc/ && \
 
 # install pydio
 RUN yum install -y --disablerepo=pydio-testing pydio && \
-    yum clean all
-
-# install supervisord
-RUN pip install "pip>=1.4,<1.5" --upgrade && \
-    pip install supervisor
-
-# pre-configure pydio
-RUN /opt/pydio/pre_conf_pydio.sh
+    yum clean all && \
+    /opt/pydio/pre_conf_pydio.sh
 
 # ssmtp
 RUN sed -i '/^sendmail_path/c\sendmail_path = /usr/sbin/ssmtp -t' /etc/php.ini
