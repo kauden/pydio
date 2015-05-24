@@ -6,7 +6,7 @@ RUN yum install -y wget && \
     rpm -Uvh http://dl.ajaxplorer.info/repos/pydio-release-1-1.noarch.rpm && \
     wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm && \
     wget http://rpms.famillecollet.com/enterprise/remi-release-6.rpm && \
-    wget -q -O – http://www.atomicorp.com/installers/atomic | sh && \
+    wget http://dl.ajaxplorer.info/repos/el6/pydio-stable/pydio-6.0.7-1.noarch.rpm && \
     rpm -Uvh remi-release-6*.rpm epel-release-6*.rpm && \
     yum -y update && \
     yum -y install httpd \
@@ -30,8 +30,9 @@ RUN yum install -y wget && \
     php-ioncube-loader \
     python-setuptools \
     ssmtp && \
-    yum install -y --disablerepo=pydio-testing pydio && \
+    rpm -Uvh pydio-6.0.7-1.noarch.rpm && \
     yum clean all && \
+    rm *.rpm && \
     mkdir -p /opt/pydio && \
     easy_install supervisor
 
