@@ -5,11 +5,9 @@ MAINTAINER Thierry Corbin <thierry.corbin@kauden.fr>
 RUN yum install -y wget && \
     rpm -Uvh http://dl.ajaxplorer.info/repos/pydio-release-1-1.noarch.rpm && \
     wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm && \
-    wget http://rpms.famillecollet.com/enterprise/remi-release-6.rpm
-
-RUN wget -q -O – http://www.atomicorp.com/installers/atomic | sh
-
-RUN rpm -Uvh remi-release-6*.rpm epel-release-6*.rpm && \
+    wget http://rpms.famillecollet.com/enterprise/remi-release-6.rpm && \
+    wget -q -O – http://www.atomicorp.com/installers/atomic | sh && \
+    rpm -Uvh remi-release-6*.rpm epel-release-6*.rpm && \
     yum -y update && \
     yum -y install httpd \
     php-mcrypt* \
@@ -31,9 +29,10 @@ RUN rpm -Uvh remi-release-6*.rpm epel-release-6*.rpm && \
     php-xml \
     php-ioncube-loader \
     python-setuptools \
-    ssmtp
-
-RUN mkdir -p /opt/pydio && \
+    ssmtp && \
+    yum install -y --disablerepo=pydio-testing pydio && \
+    yum clean all && \
+    mkdir -p /opt/pydio && \
     easy_install supervisor
 
 COPY asset/* /opt/pydio/
@@ -42,15 +41,9 @@ RUN cp -f /opt/pydio/supervisord.conf /etc/ && \
     cp -f /opt/pydio/httpd.conf /etc/httpd/conf/ && \
     chmod +x /opt/pydio/pre_conf_pydio.sh && \
     chmod +x /opt/pydio/configure_php_modules.sh && \
-    /opt/pydio/configure_php_modules.sh
-
-# install pydio
-RUN yum install -y --disablerepo=pydio-testing pydio && \
-    yum clean all && \
-    /opt/pydio/pre_conf_pydio.sh
-
-# ssmtp
-RUN sed -i '/^sendmail_path/c\sendmail_path = /usr/sbin/ssmtp -t' /etc/php.ini
+    /opt/pydio/configure_php_modules.sh && \
+    /opt/pydio/pre_conf_pydio.sh && \
+    sed -i '/^sendmail_path/c\sendmail_path = /usr/sbin/ssmtp -t' /etc/php.ini
 
 VOLUME ["/var/lib/pydio", "/var/cache/pydio"]
 
